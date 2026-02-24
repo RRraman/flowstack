@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FlowStack — Personal Execution OS</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #070710;
+    --bg2: #0d0d1a;
+    --bg3: #111120;
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(255,255,255,0.12);
+    --text: #f0f0f8;
+    --muted: #8888a8;
+    --accent: #8b5cf6;
+    --accent2: #6d28d9;
+    --green: #00ff9d;
+    --blue: #00b4ff;
+    --orange: #ff6b35;
+    --purple: #c77dff;
+    --yellow: #ffaa00;
+    --red: #ff3366;
+    --font-head: 'Bebas Neue', sans-serif;
+    --font-body: 'Barlow', sans-serif;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* NOISE OVERLAY */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  }
+
+  /* GRID BG */
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(139,92,246,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(139,92,246,0.05) 1px, transparent 1px);
+    background-size: 52px 52px;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+  /* ── NAVBAR ── */
+  nav {
+    position: fixed; top: 0; width: 100%; z-index: 100;
+    padding: 18px 40px;
+    display: flex; align-items: center; justify-content: space-between;
+    transition: all 0.3s;
+  }
+  nav.scrolled {
+    background: rgba(7,7,16,0.88);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 4px 40px rgba(0,0,0,0.4);
+    padding: 14px 40px;
+  }
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none;
+  }
+  .logo-icon {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .logo-text {
+    font-family: var(--font-head);
+    font-weight: 400; font-size: 1.4rem;
+    color: var(--text); letter-spacing: 2px;
+  }
+  .nav-links {
+    display: flex; align-items: center; gap: 32px; list-style: none;
+  }
+  .nav-links a {
+    color: var(--muted); text-decoration: none;
+    font-size: 0.85rem; transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-actions { display: flex; align-items: center; gap: 12px; }
+  .btn-ghost {
+    background: none; border: none; color: var(--muted);
+    font-size: 0.85rem; cursor: pointer; padding: 8px 16px;
+    font-family: var(--font-body); transition: color 0.2s;
+  }
+  .btn-ghost:hover { color: var(--text); }
+  .btn-primary {
+    background: var(--accent); border: none; color: #fff;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    padding: 10px 22px; border-radius: 10px;
+    font-family: var(--font-body); transition: all 0.2s;
+  }
+  .btn-primary:hover {
+    background: #7c3aed;
+    box-shadow: 0 6px 24px rgba(139,92,246,0.35);
+    transform: translateY(-1px);
+  }
+  .hamburger {
+    display: none; background: none; border: none;
+    color: var(--muted); cursor: pointer; font-size: 1.4rem;
+  }
+  .mobile-menu {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(7,7,16,0.97); z-index: 99; padding: 100px 40px 40px;
+    flex-direction: column; gap: 0;
+  }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a {
+    color: var(--text); text-decoration: none; font-size: 2rem;
+    font-family: var(--font-head); font-weight: 400;
+    letter-spacing: 2px;
+    padding: 18px 0; border-bottom: 1px solid var(--border);
+  }
+  .mobile-close {
+    position: absolute; top: 20px; right: 24px;
+    background: none; border: none; color: var(--muted);
+    font-size: 1.8rem; cursor: pointer;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh; display: flex; flex-direction: column;
+    justify-content: center; padding: 120px 40px 0;
+    position: relative; overflow: hidden;
+  }
+  .hero-glow {
+    position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
+    width: 800px; height: 800px; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(ellipse, rgba(139,92,246,0.12) 0%, transparent 65%);
+    animation: pulse-glow 4s ease-in-out infinite;
+  }
+  .hero-glow2 {
+    position: absolute; top: -10%; right: -10%;
+    width: 600px; height: 600px; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(ellipse, rgba(0,180,255,0.05) 0%, transparent 70%);
+  }
+  .hero-inner {
+    max-width: 1200px; margin: 0 auto; width: 100%;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 60px; align-items: center; position: relative; z-index: 1;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2);
+    color: #a78bfa; font-size: 0.75rem; font-weight: 600;
+    padding: 8px 16px; border-radius: 100px; margin-bottom: 24px;
+    letter-spacing: 0.3px;
+  }
+  .hero h1 {
+    font-family: var(--font-head);
+    font-size: clamp(3.8rem, 7vw, 6rem);
+    font-weight: 400; line-height: 1.0;
+    letter-spacing: 2px; margin-bottom: 20px;
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, #a78bfa, #818cf8, #60a5fa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero p {
+    color: var(--muted); font-size: 1.05rem; line-height: 1.7;
+    max-width: 480px; margin-bottom: 36px;
+  }
+  .hero-btns { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 36px; }
+  .btn-xl {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 28px; border-radius: 12px;
+    font-size: 0.9rem; font-weight: 600; cursor: pointer;
+    font-family: var(--font-body); transition: all 0.25s;
+    text-decoration: none;
+  }
+  .btn-xl-primary {
+    background: var(--accent); color: #fff; border: none;
+  }
+  .btn-xl-primary:hover {
+    background: #7c3aed;
+    box-shadow: 0 8px 32px rgba(139,92,246,0.4);
+    transform: translateY(-2px);
+  }
+  .btn-xl-outline {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text);
+  }
+  .btn-xl-outline:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.18);
+  }
+  .hero-checks {
+    display: flex; gap: 24px; flex-wrap: wrap;
+  }
+  .hero-check {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 0.8rem; color: var(--muted);
+  }
+  .hero-check span { color: #34d399; font-size: 0.9rem; }
+
+  /* DASHBOARD MOCKUP */
+  .mockup-wrap {
+    position: relative;
+    animation: float 5s ease-in-out infinite;
+  }
+  .mockup-glow {
+    position: absolute; inset: -30px; border-radius: 32px;
+    opacity: 0.15; filter: blur(40px);
+    background: radial-gradient(ellipse, var(--accent), transparent);
+    transition: all 0.6s;
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+  .mockup {
+    position: relative; border-radius: 20px;
+    background: rgba(13,13,26,0.9);
+    border: 1px solid rgba(255,255,255,0.08);
+    overflow: hidden;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+    backdrop-filter: blur(20px);
+  }
+  .mockup-bar {
+    background: rgba(5,5,14,0.6);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .traffic-lights { display: flex; gap: 6px; }
+  .tl { width: 12px; height: 12px; border-radius: 50%; }
+  .tl-r { background: #ff5f57; }
+  .tl-y { background: #ffbd2e; }
+  .tl-g { background: #28ca41; }
+  .url-bar {
+    flex: 1; background: rgba(255,255,255,0.04);
+    border-radius: 6px; padding: 5px 12px;
+    font-size: 0.7rem; color: #555;
+  }
+  .mockup-body { padding: 16px; }
+  .domain-tabs {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .domain-tab {
+    padding: 5px 12px; border-radius: 8px; font-size: 0.7rem;
+    font-weight: 600; cursor: pointer; transition: all 0.2s;
+    border: 1px solid transparent; background: none;
+    font-family: var(--font-body);
+  }
+  .mission-card {
+    border-radius: 12px; padding: 14px; margin-bottom: 12px;
+    transition: all 0.4s;
+  }
+  .mission-label {
+    font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .xp-badge {
+    background: rgba(0,255,157,0.15); color: #00ff9d;
+    font-size: 0.65rem; padding: 2px 8px; border-radius: 20px; font-weight: 600;
+  }
+  .mission-text { font-size: 0.8rem; color: var(--text); line-height: 1.4; }
+  .xp-bar-wrap { margin-bottom: 12px; }
+  .xp-bar-labels {
+    display: flex; justify-content: space-between;
+    font-size: 0.65rem; color: var(--muted); margin-bottom: 5px;
+  }
+  .xp-bar-track {
+    height: 6px; background: rgba(255,255,255,0.06);
+    border-radius: 99px; overflow: hidden;
+  }
+  .xp-bar-fill {
+    height: 100%; border-radius: 99px;
+    transition: width 0.15s linear;
+  }
+  .task-list { display: flex; flex-direction: column; gap: 7px; }
+  .task-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.72rem; color: var(--muted);
+  }
+  .task-check {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 1.5px solid; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .task-done { text-decoration: line-through; color: #444; }
+
+  /* MARQUEE */
+  .marquee-section {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+    padding: 14px 0; overflow: hidden;
+    margin-top: 60px;
+  }
+  .marquee-track {
+    display: flex; gap: 48px; width: max-content;
+    animation: marquee 16s linear infinite;
+  }
+  .marquee-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.8rem; font-weight: 600; white-space: nowrap;
+  }
+
+  /* ── SECTIONS SHARED ── */
+  section { padding: 100px 40px; }
+  .section-inner { max-width: 1200px; margin: 0 auto; }
+  .section-label {
+    font-size: 0.7rem; color: #a78bfa; text-transform: uppercase;
+    letter-spacing: 2.5px; font-weight: 700; margin-bottom: 14px;
+  }
+  .section-title {
+    font-family: var(--font-head);
+    font-size: clamp(2.6rem, 4.5vw, 4rem);
+    font-weight: 400; line-height: 1.05;
+    letter-spacing: 1.5px; margin-bottom: 16px;
+  }
+  .section-sub {
+    color: var(--muted); font-size: 1rem;
+    max-width: 520px; line-height: 1.7;
+  }
+  .text-center { text-align: center; }
+  .mx-auto { margin-left: auto; margin-right: auto; }
+
+  /* ── PROBLEM ── */
+  .problem-section { background: transparent; }
+  .problem-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 20px; margin-top: 48px;
+  }
+  .problem-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 28px;
+    transition: all 0.3s;
+  }
+  .problem-card:hover {
+    border-color: rgba(139,92,246,0.2);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  }
+  .problem-emoji { font-size: 2rem; margin-bottom: 14px; display: block; }
+  .problem-card h3 {
+    font-family: var(--font-head); font-weight: 400;
+    letter-spacing: 1px; margin-bottom: 8px; font-size: 1.3rem;
+  }
+  .problem-card p { color: var(--muted); font-size: 0.85rem; line-height: 1.6; }
+  .problem-footer {
+    text-align: center; margin-top: 40px;
+    color: var(--muted); font-size: 1rem;
+  }
+  .problem-footer strong { color: var(--text); }
+
+  /* ── FEATURES ── */
+  .features-section { background: rgba(255,255,255,0.015); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .features-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 18px; margin-top: 52px;
+  }
+  .feature-card {
+    background: rgba(5,5,14,0.5);
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 28px;
+    transition: all 0.3s; cursor: default;
+  }
+  .feature-card:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-4px);
+    box-shadow: 0 24px 48px rgba(0,0,0,0.3);
+  }
+  .feature-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; margin-bottom: 18px;
+  }
+  .feature-card h3 {
+    font-family: var(--font-head); font-weight: 400;
+    font-size: 1.3rem; letter-spacing: 1px; margin-bottom: 8px;
+  }
+  .feature-card p { color: var(--muted); font-size: 0.84rem; line-height: 1.65; }
+
+  /* ── HOW IT WORKS ── */
+  .hiw-steps {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 40px; margin-top: 56px; position: relative;
+  }
+  .hiw-steps::before {
+    content: '';
+    position: absolute; top: 56px; left: 16%; right: 16%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(139,92,246,0.25), transparent);
+  }
+  .hiw-step { text-align: center; }
+  .hiw-icon-wrap {
+    width: 96px; height: 96px; border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.2rem; margin: 0 auto 20px; border: 1px solid;
+  }
+  .hiw-num {
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  .hiw-step h3 {
+    font-family: var(--font-head); font-weight: 400;
+    font-size: 1.5rem; letter-spacing: 1px; margin-bottom: 10px;
+  }
+  .hiw-step p { color: var(--muted); font-size: 0.84rem; line-height: 1.6; }
+
+  /* ── DOMAINS ── */
+  .domains-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 14px; margin-top: 40px;
+  }
+  .domain-card {
+    border-radius: 18px; padding: 22px 16px;
+    text-align: center; border: 1px solid;
+    transition: all 0.3s; cursor: default;
+  }
+  .domain-card:hover { transform: scale(1.04); }
+  .domain-card-icon {
+    width: 48px; height: 48px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; margin: 0 auto 12px;
+  }
+  .domain-card h4 {
+    font-family: var(--font-head); font-weight: 400;
+    font-size: 1.1rem; letter-spacing: 1px; margin-bottom: 4px;
+  }
+  .domain-card span { font-size: 0.72rem; }
+
+  /* ── THEMES ── */
+  .themes-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 14px; margin-top: 48px;
+  }
+  .theme-card {
+    border-radius: 20px; padding: 22px;
+    text-align: left; border: 2px solid transparent;
+    background-size: cover; cursor: pointer;
+    transition: all 0.3s;
+  }
+  .theme-card:hover { transform: scale(1.02); }
+  .theme-card.active { border-color: var(--card-accent) !important; }
+  .theme-emoji { font-size: 1.8rem; display: block; margin-bottom: 10px; }
+  .theme-card h4 {
+    font-family: var(--font-head); font-weight: 400;
+    color: #fff; margin-bottom: 4px; font-size: 1.2rem; letter-spacing: 1px;
+  }
+  .theme-card p { color: #888; font-size: 0.75rem; }
+  .theme-bar { height: 3px; border-radius: 99px; width: 40px; margin-top: 12px; }
+  .theme-preview {
+    margin-top: 20px; border-radius: 18px; border: 1px solid var(--border);
+    padding: 28px; text-align: center; transition: all 0.4s;
+    background: rgba(255,255,255,0.02);
+  }
+  .theme-preview-emoji { font-size: 2.5rem; display: block; margin-bottom: 8px; }
+  .theme-preview h3 {
+    font-family: var(--font-head); font-weight: 400;
+    font-size: 1.8rem; letter-spacing: 2px; color: #fff; margin-bottom: 6px;
+  }
+  .theme-preview p { color: var(--muted); font-size: 0.85rem; }
+
+  /* ── TESTIMONIALS ── */
+  .testimonials-section { background: rgba(255,255,255,0.015); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .testimonials-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 20px; margin-top: 52px;
+  }
+  .testi-card {
+    background: rgba(5,5,14,0.6);
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 28px;
+    transition: all 0.3s;
+  }
+  .testi-card:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-4px);
+  }
+  .stars { display: flex; gap: 4px; margin-bottom: 18px; font-size: 0.85rem; }
+  .testi-quote {
+    color: rgba(240,240,248,0.75); font-size: 0.87rem;
+    line-height: 1.7; margin-bottom: 22px;
+    font-style: italic;
+  }
+  .testi-footer {
+    display: flex; align-items: center; gap: 12px;
+    padding-top: 18px; border-top: 1px solid var(--border);
+  }
+  .testi-avatar {
+    width: 40px; height: 40px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+  }
+  .testi-name { font-weight: 600; font-size: 0.88rem; margin-bottom: 2px; }
+  .testi-role { font-size: 0.72rem; }
+
+  /* ── PRICING ── */
+  .pricing-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 20px; max-width: 780px; margin: 52px auto 0;
+  }
+  .pricing-card {
+    border-radius: 24px; padding: 32px;
+    border: 1px solid var(--border);
+    background: rgba(5,5,14,0.5);
+    position: relative; overflow: hidden;
+    transition: all 0.3s;
+  }
+  .pricing-card:hover { transform: translateY(-4px); }
+  .pricing-card.highlight {
+    border-color: rgba(0,255,157,0.25);
+    background: rgba(0,255,157,0.04);
+  }
+  .popular-badge {
+    position: absolute; top: 0; right: 0;
+    background: var(--green); color: #0a0a0a;
+    font-size: 0.7rem; font-weight: 800;
+    padding: 6px 16px; border-bottom-left-radius: 12px;
+    letter-spacing: 0.5px;
+  }
+  .plan-name { font-size: 0.8rem; font-weight: 700; margin-bottom: 6px; }
+  .plan-price {
+    font-family: var(--font-head); font-size: 3.2rem;
+    font-weight: 400; letter-spacing: 2px; color: #fff; line-height: 1; margin-bottom: 24px;
+  }
+  .plan-price span { font-size: 1rem; font-weight: 400; color: var(--muted); }
+  .plan-features { list-style: none; margin-bottom: 28px; }
+  .plan-features li {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 0.85rem; color: rgba(240,240,248,0.8);
+    padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .plan-features li:last-child { border-bottom: none; }
+  .check-icon { font-size: 0.75rem; flex-shrink: 0; }
+  .btn-plan {
+    width: 100%; padding: 14px;
+    border-radius: 12px; font-size: 0.88rem;
+    font-weight: 600; cursor: pointer;
+    font-family: var(--font-body); transition: all 0.25s; border: none;
+  }
+  .btn-plan-outline {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    color: var(--text);
+  }
+  .btn-plan-outline:hover { background: rgba(255,255,255,0.05); }
+  .btn-plan-green { background: var(--green); color: #0a0a0a; }
+  .btn-plan-green:hover {
+    opacity: 0.9;
+    box-shadow: 0 8px 24px rgba(0,255,157,0.25);
+    transform: translateY(-2px);
+  }
+
+  /* ── CTA ── */
+  .cta-section { position: relative; overflow: hidden; text-align: center; }
+  .cta-glow {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 700px; height: 700px; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(ellipse, rgba(139,92,246,0.1) 0%, transparent 65%);
+    animation: pulse-glow 5s ease-in-out infinite;
+  }
+  .cta-section .section-title { font-size: clamp(2.5rem, 4vw, 3.5rem); }
+  .email-form {
+    display: flex; gap: 10px; max-width: 440px; margin: 32px auto 0;
+  }
+  .email-input {
+    flex: 1; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 14px 18px;
+    color: var(--text); font-size: 0.9rem;
+    font-family: var(--font-body); outline: none;
+    transition: border-color 0.2s;
+  }
+  .email-input:focus { border-color: rgba(139,92,246,0.4); }
+  .email-input::placeholder { color: #555; }
+  .cta-note { color: #444; font-size: 0.75rem; margin-top: 12px; }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    background: var(--bg); padding: 40px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: gap; gap: 20px;
+  }
+  .footer-links {
+    display: flex; flex-wrap: wrap; gap: 24px; list-style: none;
+  }
+  .footer-links a {
+    color: var(--muted); text-decoration: none;
+    font-size: 0.82rem; transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--text); }
+  .footer-copy { color: #333; font-size: 0.75rem; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-14px); }
+  }
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in { opacity: 0; animation: fadeInUp 0.7s ease forwards; }
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.3s; }
+  .delay-4 { animation-delay: 0.4s; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 1024px) {
+    .features-grid { grid-template-columns: repeat(2, 1fr); }
+    .domains-grid { grid-template-columns: repeat(3, 1fr); }
+    .themes-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 768px) {
+    nav { padding: 16px 20px; }
+    nav.scrolled { padding: 12px 20px; }
+    .nav-links, .nav-actions { display: none; }
+    .hamburger { display: block; }
+    section { padding: 70px 20px; }
+    .hero { padding: 100px 20px 0; }
+    .hero-inner { grid-template-columns: 1fr; gap: 40px; }
+    .problem-grid, .features-grid, .hiw-steps, .testimonials-grid { grid-template-columns: 1fr; }
+    .hiw-steps::before { display: none; }
+    .domains-grid { grid-template-columns: repeat(2, 1fr); }
+    .themes-grid { grid-template-columns: repeat(2, 1fr); }
+    .pricing-grid { grid-template-columns: 1fr; }
+    footer { flex-direction: column; text-align: center; padding: 30px 20px; }
+    .email-form { flex-direction: column; }
+  }
+</style>
+</head>
+<body class="grid-bg">
+
+<!-- NAV -->
+<nav id="navbar">
+  <a href="#" class="nav-logo">
+    <div class="logo-icon">⚡</div>
+    <span class="logo-text">FlowStack</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#how-it-works">How It Works</a></li>
+    <li><a href="#themes">Themes</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+  </ul>
+  <div class="nav-actions">
+    <button class="btn-ghost">Sign In</button>
+    <button class="btn-primary">Start Free</button>
+  </div>
+  <button class="hamburger" onclick="toggleMenu()">☰</button>
+</nav>
+
+<!-- MOBILE MENU -->
+<div class="mobile-menu" id="mobileMenu">
+  <button class="mobile-close" onclick="toggleMenu()">✕</button>
+  <a href="#features" onclick="toggleMenu()">Features</a>
+  <a href="#how-it-works" onclick="toggleMenu()">How It Works</a>
+  <a href="#themes" onclick="toggleMenu()">Themes</a>
+  <a href="#pricing" onclick="toggleMenu()">Pricing</a>
+  <button class="btn-primary" style="margin-top:24px;padding:14px;border-radius:12px;font-size:1rem;">Start Free</button>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-glow2"></div>
+  <div class="hero-inner">
+    <div>
+      <div class="hero-badge fade-in">⚡ Personal Execution OS — Now in Beta</div>
+      <h1 class="fade-in delay-1">
+        One System.<br>
+        <span class="gradient-text">Every Domain.</span><br>
+        Zero Excuses.
+      </h1>
+      <p class="fade-in delay-2">FlowStack is a unified operating system for high-performers managing multiple disciplines — trading, studying, building, training — all under one roof with XP, missions, and AI coaching.</p>
+      <div class="hero-btns fade-in delay-3">
+        <a href="#" class="btn-xl btn-xl-primary">Start For Free →</a>
+        <a href="#how-it-works" class="btn-xl btn-xl-outline">▶ See How It Works</a>
+      </div>
+      <div class="hero-checks fade-in delay-4">
+        <span class="hero-check"><span>✓</span> No credit card</span>
+        <span class="hero-check"><span>✓</span> Free forever tier</span>
+        <span class="hero-check"><span>✓</span> Setup in 2 min</span>
+      </div>
+    </div>
+    <!-- DASHBOARD MOCKUP -->
+    <div class="mockup-wrap fade-in delay-2">
+      <div class="mockup-glow" id="mockupGlow"></div>
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="traffic-lights">
+            <div class="tl tl-r"></div>
+            <div class="tl tl-y"></div>
+            <div class="tl tl-g"></div>
+          </div>
+          <div class="url-bar">flowstack.app/dashboard</div>
+        </div>
+        <div class="mockup-body">
+          <div class="domain-tabs" id="domainTabs"></div>
+          <div class="mission-card" id="missionCard">
+            <div class="mission-label">
+              <span id="missionLabel">Today's Mission</span>
+              <span class="xp-badge">+50 XP</span>
+            </div>
+            <div class="mission-text" id="missionText">Complete 3 trade setups & journal entries</div>
+          </div>
+          <div class="xp-bar-wrap">
+            <div class="xp-bar-labels">
+              <span>Level 7 → 8</span>
+              <span id="xpLabel" style="color:var(--green)">67/100 XP</span>
+            </div>
+            <div class="xp-bar-track">
+              <div class="xp-bar-fill" id="xpFill" style="width:67%;background:linear-gradient(90deg,rgba(0,255,157,0.6),#00ff9d)"></div>
+            </div>
+          </div>
+          <div class="task-list">
+            <div class="task-item">
+              <div class="task-check" style="border-color:var(--green);background:rgba(0,255,157,0.1)">✓</div>
+              <span class="task-done">Review watchlist</span>
+            </div>
+            <div class="task-item">
+              <div class="task-check" style="border-color:var(--green);background:rgba(0,255,157,0.1)">✓</div>
+              <span class="task-done">Study price action patterns</span>
+            </div>
+            <div class="task-item">
+              <div class="task-check" style="border-color:#333;"></div>
+              <span>Backtest strategy #4</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MARQUEE -->
+  <div class="marquee-section">
+    <div class="marquee-track" id="marqueeTrack"></div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section class="problem-section">
+  <div class="section-inner">
+    <div class="text-center">
+      <p class="section-label">Sound familiar?</p>
+      <h2 class="section-title">You're not lazy.<br>Your system is broken.</h2>
+    </div>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <span class="problem-emoji">📦</span>
+        <h3>Tool sprawl</h3>
+        <p>Notion. Trello. Apple Notes. A random spreadsheet. You spend more time organizing than executing.</p>
+      </div>
+      <div class="problem-card">
+        <span class="problem-emoji">🔄</span>
+        <h3>Context switching hell</h3>
+        <p>Jumping from fitness to trading to study with zero mental separation. Everything bleeds together.</p>
+      </div>
+      <div class="problem-card">
+        <span class="problem-emoji">📉</span>
+        <h3>No compounding progress</h3>
+        <p>You grind hard for two weeks then lose momentum. No streak, no XP, no reason to keep going.</p>
+      </div>
+    </div>
+    <p class="problem-footer">FlowStack replaces the chaos with <strong>one intelligent system</strong> that adapts to every area of your life.</p>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="section-inner">
+    <div class="text-center">
+      <p class="section-label">Everything you need</p>
+      <h2 class="section-title">Built for execution.<br>Not organization.</h2>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.2)">🗂️</div>
+        <h3>Domain Workspaces</h3>
+        <p>Isolated environments for each discipline. Trading, Fitness, Study — each with its own XP, materials, and AI coach. No bleed-through.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(0,255,157,0.1);border:1px solid rgba(0,255,157,0.2)">🏆</div>
+        <h3>XP & Level System</h3>
+        <p>Every task earns XP. Level up. Watch your discipline compound into measurable mastery over weeks.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(0,180,255,0.1);border:1px solid rgba(0,180,255,0.2)">🎯</div>
+        <h3>Daily Mission Engine</h3>
+        <p>One primary objective per day, per domain. Prioritize ruthlessly. Execute with intent. No more decision fatigue.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(199,125,255,0.1);border:1px solid rgba(199,125,255,0.2)">🧠</div>
+        <h3>AI Domain Coach</h3>
+        <p>Context-aware coaching per discipline. Not generic advice — sharp, domain-specific guidance that knows where you are.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.2)">⏱️</div>
+        <h3>Pomodoro + Penalties</h3>
+        <p>Tab-switch detection. Distraction logging. Your focus sessions have real accountability built in.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(255,170,0,0.1);border:1px solid rgba(255,170,0,0.2)">🔥</div>
+        <h3>Mood-Based Themes</h3>
+        <p>4 modes that match your mental state: Serious, Calm, Focused, Energy. Your OS adapts to you, not the other way around.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works">
+  <div class="section-inner">
+    <div class="text-center">
+      <p class="section-label">Simple to start</p>
+      <h2 class="section-title">Up and executing in minutes.</h2>
+    </div>
+    <div class="hiw-steps">
+      <div class="hiw-step">
+        <div class="hiw-icon-wrap" style="background:rgba(139,92,246,0.1);border-color:rgba(139,92,246,0.25)">🗂️</div>
+        <div class="hiw-num" style="color:#8b5cf6">01</div>
+        <h3>Pick Your Domains</h3>
+        <p>Choose up to 5 disciplines. Each gets its own workspace, AI coach, and XP track. No bleed-through.</p>
+      </div>
+      <div class="hiw-step">
+        <div class="hiw-icon-wrap" style="background:rgba(0,255,157,0.08);border-color:rgba(0,255,157,0.2)">🎯</div>
+        <div class="hiw-num" style="color:#00ff9d">02</div>
+        <h3>Set Daily Missions</h3>
+        <p>Each morning, define one key objective per domain. Stack your intentions. Prioritize what actually matters.</p>
+      </div>
+      <div class="hiw-step">
+        <div class="hiw-icon-wrap" style="background:rgba(255,170,0,0.08);border-color:rgba(255,170,0,0.2)">🏆</div>
+        <div class="hiw-num" style="color:#ffaa00">03</div>
+        <h3>Execute & Level Up</h3>
+        <p>Complete tasks, earn XP, climb levels. Your discipline compounds daily — visible, measurable, addictive.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DOMAIN SHOWCASE -->
+<section style="padding:60px 40px;border-top:1px solid var(--border)">
+  <div class="section-inner">
+    <div class="text-center">
+      <p class="section-label">Your life, segmented</p>
+      <h2 class="section-title" style="font-size:clamp(1.8rem,3vw,2.4rem)">Five domains. One dashboard.</h2>
+    </div>
+    <div class="domains-grid">
+      <div class="domain-card" style="background:rgba(0,255,157,0.05);border-color:rgba(0,255,157,0.15)">
+        <div class="domain-card-icon" style="background:rgba(0,255,157,0.12)">📈</div>
+        <h4>Trading</h4>
+        <span style="color:#00ff9d">Master markets</span>
+      </div>
+      <div class="domain-card" style="background:rgba(0,180,255,0.05);border-color:rgba(0,180,255,0.15)">
+        <div class="domain-card-icon" style="background:rgba(0,180,255,0.12)">💻</div>
+        <h4>Quants</h4>
+        <span style="color:#00b4ff">Build models</span>
+      </div>
+      <div class="domain-card" style="background:rgba(255,107,53,0.05);border-color:rgba(255,107,53,0.15)">
+        <div class="domain-card-icon" style="background:rgba(255,107,53,0.12)">🛒</div>
+        <h4>E-Commerce</h4>
+        <span style="color:#ff6b35">Scale stores</span>
+      </div>
+      <div class="domain-card" style="background:rgba(199,125,255,0.05);border-color:rgba(199,125,255,0.15)">
+        <div class="domain-card-icon" style="background:rgba(199,125,255,0.12)">📚</div>
+        <h4>Study</h4>
+        <span style="color:#c77dff">Learn deeply</span>
+      </div>
+      <div class="domain-card" style="background:rgba(255,170,0,0.05);border-color:rgba(255,170,0,0.15)">
+        <div class="domain-card-icon" style="background:rgba(255,170,0,0.12)">🏋️</div>
+        <h4>Fitness</h4>
+        <span style="color:#ffaa00">Build strength</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- THEMES -->
+<section id="themes" style="background:rgba(255,255,255,0.015);border-top:1px solid var(--border)">
+  <div class="section-inner">
+    <div class="text-center">
+      <p class="section-label">Your OS, your mood</p>
+      <h2 class="section-title">Four modes.<br>One for every mental state.</h2>
+      <p class="section-sub mx-auto" style="font-size:0.9rem">FlowStack adapts to how you feel, not just what you need to do. Click a theme to preview.</p>
+    </div>
+    <div class="themes-grid">
+      <div class="theme-card" onclick="setTheme(0)" id="tc0" style="background:linear-gradient(135deg,#1a0000,#0a0a0a)">
+        <span class="theme-emoji">⚡</span>
+        <h4>Serious Mode</h4>
+        <p>Execution mode. No distractions.</p>
+        <div class="theme-bar" style="background:#ff3333"></div>
+      </div>
+      <div class="theme-card" onclick="setTheme(1)" id="tc1" style="background:linear-gradient(135deg,#001a0f,#0a0a0a)">
+        <span class="theme-emoji">🌿</span>
+        <h4>Calm Mode</h4>
+        <p>Reflect. Absorb. Reset.</p>
+        <div class="theme-bar" style="background:#34d399"></div>
+      </div>
+      <div class="theme-card active" onclick="setTheme(2)" id="tc2" style="background:linear-gradient(135deg,#00061a,#0a0a0a);border-color:rgba(96,165,250,0.35)">
+        <span class="theme-emoji">🎯</span>
+        <h4>Focused Mode</h4>
+        <p>Clean flow. Peak output.</p>
+        <div class="theme-bar" style="background:#60a5fa"></div>
+      </div>
+      <div class="theme-card" onclick="setTheme(3)" id="tc3" style="background:linear-gradient(135deg,#1a0700,#0a0a0a)">
+        <span class="theme-emoji">🔥</span>
+        <h4>Energy Mode</h4>
+        <p>High intensity. Maximum drive.</p>
+        <div class="theme-bar" style="background:#fb923c"></div>
+      </div>
+    </div>
+    <div class="theme-preview" id="themePreview">
+      <span class="theme-preview-emoji" id="tpEmoji">🎯</span>
+      <h3 id="tpTitle">Focused Mode activated</h3>
+      <p id="tpDesc">Clean flow. Peak output.</p>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials-section">
+  <div class="section-inner">
+    <div class="text-center">
+      <p class="section-label">From the community</p>
+      <h2 class="section-title">Real people. Real stacks.</h2>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testi-card">
+        <div class="stars">⭐⭐⭐⭐⭐</div>
+        <p class="testi-quote">"I was juggling TradingView, Notion, and a spreadsheet. FlowStack killed all three. My execution consistency is up 40% this quarter."</p>
+        <div class="testi-footer">
+          <div class="testi-avatar" style="background:rgba(0,255,157,0.15);color:#00ff9d">AM</div>
+          <div>
+            <div class="testi-name">Arjun Mehta</div>
+            <div class="testi-role" style="color:#00ff9d">Prop Trader · Trading Domain</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="stars">⭐⭐⭐⭐⭐</div>
+        <p class="testi-quote">"The domain separation is genius. I switch from studying for exams to managing my Shopify store without my brain breaking."</p>
+        <div class="testi-footer">
+          <div class="testi-avatar" style="background:rgba(199,125,255,0.15);color:#c77dff">SC</div>
+          <div>
+            <div class="testi-name">Sofia Chen</div>
+            <div class="testi-role" style="color:#c77dff">CS Student · Study + E-Commerce</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="stars">⭐⭐⭐⭐⭐</div>
+        <p class="testi-quote">"The XP system sounds gimmicky until you're grinding at 11pm for a level-up. It works. My streak is at 47 days and counting."</p>
+        <div class="testi-footer">
+          <div class="testi-avatar" style="background:rgba(255,170,0,0.15);color:#ffaa00">MW</div>
+          <div>
+            <div class="testi-name">Marcus Webb</div>
+            <div class="testi-role" style="color:#ffaa00">Powerlifter · Fitness + Quants</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="section-inner">
+    <div class="text-center">
+      <p class="section-label">Simple pricing</p>
+      <h2 class="section-title">Start free. Go pro when ready.</h2>
+    </div>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="plan-name" style="color:#8b5cf6">Core</div>
+        <div class="plan-price">Free<span> forever</span></div>
+        <ul class="plan-features">
+          <li><span class="check-icon" style="color:#8b5cf6">✓</span> 3 Active Domains</li>
+          <li><span class="check-icon" style="color:#8b5cf6">✓</span> Basic XP Tracking</li>
+          <li><span class="check-icon" style="color:#8b5cf6">✓</span> Daily Mission Board</li>
+          <li><span class="check-icon" style="color:#8b5cf6">✓</span> Pomodoro Timer</li>
+          <li><span class="check-icon" style="color:#8b5cf6">✓</span> 10 Materials per Domain</li>
+        </ul>
+        <button class="btn-plan btn-plan-outline">Get Started →</button>
+      </div>
+      <div class="pricing-card highlight">
+        <div class="popular-badge">POPULAR</div>
+        <div class="plan-name" style="color:#00ff9d">Pro</div>
+        <div class="plan-price">$12<span>/mo</span></div>
+        <ul class="plan-features">
+          <li><span class="check-icon" style="color:#00ff9d">✓</span> All 5 Domains</li>
+          <li><span class="check-icon" style="color:#00ff9d">✓</span> Full XP + Level System</li>
+          <li><span class="check-icon" style="color:#00ff9d">✓</span> AI Domain Coach</li>
+          <li><span class="check-icon" style="color:#00ff9d">✓</span> Unlimited Materials</li>
+          <li><span class="check-icon" style="color:#00ff9d">✓</span> All 4 Mood Themes</li>
+          <li><span class="check-icon" style="color:#00ff9d">✓</span> Analytics Dashboard</li>
+          <li><span class="check-icon" style="color:#00ff9d">✓</span> Priority Support</li>
+        </ul>
+        <button class="btn-plan btn-plan-green">Go Pro →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="cta-section">
+  <div class="cta-glow"></div>
+  <div class="section-inner" style="position:relative;z-index:1">
+    <h2 class="section-title">Stop Managing.<br><span class="gradient-text">Start Executing.</span></h2>
+    <p style="color:var(--muted);font-size:1.05rem;margin-top:12px">Join thousands building their stack. Your domains won't level themselves up.</p>
+    <div class="email-form">
+      <input class="email-input" type="email" placeholder="your@email.com" />
+      <button class="btn-primary" style="padding:14px 22px;border-radius:12px;white-space:nowrap">Get Early Access</button>
+    </div>
+    <p class="cta-note">Free tier forever. No card required. Cancel anytime.</p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <a href="#" class="nav-logo">
+    <div class="logo-icon">⚡</div>
+    <span class="logo-text">FlowStack</span>
+  </a>
+  <ul class="footer-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#how-it-works">How It Works</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#">Privacy</a></li>
+    <li><a href="#">Terms</a></li>
+    <li><a href="#">Contact</a></li>
+  </ul>
+  <span class="footer-copy">© 2025 FlowStack. Built for executers.</span>
+</footer>
+
+<script>
+  // ── NAVBAR SCROLL
+  window.addEventListener('scroll', () => {
+    document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 40);
+  });
+
+  // ── MOBILE MENU
+  function toggleMenu() {
+    document.getElementById('mobileMenu').classList.toggle('open');
+  }
+
+  // ── DOMAIN DATA
+  const domains = [
+    { name: "Trading",    color: "#00ff9d", mission: "Complete 3 trade setups & journal entries",    xpColor: "#00ff9d" },
+    { name: "Quants",     color: "#00b4ff", mission: "Finish LSTM model notebook chapter 4",          xpColor: "#00b4ff" },
+    { name: "E-Commerce", color: "#ff6b35", mission: "Launch first product listing on Shopify",       xpColor: "#ff6b35" },
+    { name: "Study",      color: "#c77dff", mission: "Complete Chapter 7 + full practice set",        xpColor: "#c77dff" },
+    { name: "Fitness",    color: "#ffaa00", mission: "Squat 5×5 at 80% 1RM, log in tracker",         xpColor: "#ffaa00" },
+  ];
+  let activeDomain = 0;
+  let xp = 67;
+
+  // Build tabs
+  const tabsEl = document.getElementById('domainTabs');
+  domains.forEach((d, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'domain-tab';
+    btn.textContent = d.name;
+    btn.onclick = () => switchDomain(i);
+    tabsEl.appendChild(btn);
+  });
+
+  function switchDomain(i) {
+    activeDomain = i;
+    const d = domains[i];
+    // update tabs
+    tabsEl.querySelectorAll('.domain-tab').forEach((t, ti) => {
+      if (ti === i) {
+        t.style.background = `${d.color}20`;
+        t.style.color = d.color;
+        t.style.borderColor = `${d.color}40`;
+      } else {
+        t.style.background = 'transparent';
+        t.style.color = '#6b7280';
+        t.style.borderColor = 'transparent';
+      }
+    });
+    document.getElementById('missionCard').style.background = `${d.color}08`;
+    document.getElementById('missionCard').style.borderColor = `${d.color}25`;
+    document.getElementById('missionCard').style.border = `1px solid ${d.color}25`;
+    document.querySelector('#missionCard .mission-label span:first-child').style.color = d.color;
+    document.getElementById('missionText').textContent = d.mission;
+    document.getElementById('xpLabel').style.color = d.color;
+    document.getElementById('xpFill').style.background = `linear-gradient(90deg,${d.color}70,${d.color})`;
+    document.getElementById('mockupGlow').style.background = `radial-gradient(ellipse, ${d.color}, transparent)`;
+  }
+  switchDomain(0);
+
+  // XP animation
+  setInterval(() => {
+    xp = xp >= 100 ? 5 : xp + 1;
+    document.getElementById('xpFill').style.width = xp + '%';
+    document.getElementById('xpLabel').textContent = xp + '/100 XP';
+  }, 90);
+
+  // ── MARQUEE
+  const marqueeItems = [...domains, ...domains, ...domains, ...domains];
+  const marqueeEl = document.getElementById('marqueeTrack');
+  const emojis = ["📈","💻","🛒","📚","🏋️"];
+  marqueeItems.forEach((d, i) => {
+    const item = document.createElement('div');
+    item.className = 'marquee-item';
+    item.style.color = d.color;
+    item.innerHTML = `<span>${emojis[i % 5]}</span> ${d.name}`;
+    marqueeEl.appendChild(item);
+  });
+
+  // ── THEMES
+  const themes = [
+    { emoji: "⚡", name: "Serious", desc: "Execution mode. No distractions.", accent: "#ff3333", border: "rgba(255,51,51,0.3)" },
+    { emoji: "🌿", name: "Calm",    desc: "Reflect. Absorb. Reset.",          accent: "#34d399", border: "rgba(52,211,153,0.3)" },
+    { emoji: "🎯", name: "Focused", desc: "Clean flow. Peak output.",         accent: "#60a5fa", border: "rgba(96,165,250,0.3)" },
+    { emoji: "🔥", name: "Energy",  desc: "High intensity. Maximum drive.",   accent: "#fb923c", border: "rgba(251,146,60,0.3)" },
+  ];
+  let activeThemeIdx = 2;
+
+  function setTheme(i) {
+    activeThemeIdx = i;
+    const t = themes[i];
+    // reset all
+    [0,1,2,3].forEach(idx => {
+      document.getElementById('tc'+idx).style.borderColor = 'transparent';
+    });
+    document.getElementById('tc'+i).style.borderColor = t.border;
+    document.getElementById('tpEmoji').textContent = t.emoji;
+    document.getElementById('tpTitle').textContent = t.name + ' Mode activated';
+    document.getElementById('tpDesc').textContent = t.desc;
+    document.getElementById('themePreview').style.borderColor = t.border;
+    document.getElementById('themePreview').style.background = t.accent + '08';
+  }
+
+  // ── INTERSECTION OBSERVER for fade-in
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.animationPlayState = 'running';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.problem-card, .feature-card, .testi-card, .hiw-step').forEach(el => {
+    el.style.opacity = '0';
+    el.style.animation = 'fadeInUp 0.6s ease forwards paused';
+    observer.observe(el);
+  });
+</script>
+</body>
+</html>
